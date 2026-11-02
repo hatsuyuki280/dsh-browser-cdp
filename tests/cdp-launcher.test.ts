@@ -34,9 +34,10 @@ describe('launcher args assembly', () => {
     expect(args.join(' ')).not.toContain('--headless')
     expect(args.join(' ')).not.toContain('--proxy-server')
   })
-  it('honours localHeadless with the modern flag', () => {
+  it('honours localHeadless with the legacy headless flag', () => {
     const args = buildLaunchArgs({ userDataDir: 'p', port: 1, headless: true })
-    expect(args).toContain('--headless=new')
+    expect(args).toContain('--headless')
+    expect(args).not.toContain('--headless=new')
   })
 })
 
@@ -78,7 +79,8 @@ describe('launcher lifecycle', () => {
     const f = fakeIo({ port: 9444, pid: 4242 })
     const out = await launchLocalBrowser({ chromePath: 'C:/x/chrome.exe', localHeadless: true, statePath: 'C:/fake/launcher.json' }, f.io)
     expect(out).toMatchObject({ ok: true, reused: false, pid: 4242, port: 9444 })
-    expect(f.spawned[0]!.args.join(' ')).toContain('--headless=new')
+    expect(f.spawned[0]!.args.join(' ')).toContain('--headless')
+    expect(f.spawned[0]!.args.join(' ')).not.toContain('--headless=new')
     expect(f.state['C:/fake/launcher.json']).toContain('"pid": 4242')
   })
 

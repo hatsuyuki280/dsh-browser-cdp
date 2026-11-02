@@ -136,7 +136,10 @@ export function buildLaunchArgs(options: {
     '--no-first-run',
     '--no-default-browser-check',
     '--remote-allow-origins=*',
-    ...(options.headless ? ['--headless=new'] : []),
+    // This fork uses legacy headless for the managed launcher: Chrome 153's
+    // `--headless=new` plus `--in-process-gpu` SIGTRAPs on the restricted
+    // Linux namespace, while legacy `--headless` + in-process GPU stays up.
+    ...(options.headless ? ['--headless'] : []),
     ...userArgs,
   ]
 }
