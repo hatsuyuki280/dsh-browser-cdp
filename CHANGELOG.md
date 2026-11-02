@@ -1,3 +1,14 @@
+## 1.7.7-dshfix.1 (2026-11-02)
+
+**Fork-specific diagnostics plus the local security/UX patches.**
+
+- New optional `bcdp_diagnostics` tool in the `power` tier (`toolExtended`), with one stable surface for three gaps: `kind=network` reads recent request/response entries, `kind=console` reads console/page errors, and `kind=pdf` renders the current page via `Page.printToPDF` and returns the saved local path.
+- Worker-side bounded buffers (300 entries per target) capture `Network.*`, `Runtime.consoleAPICalled`, `Runtime.exceptionThrown`, and `Log.entryAdded` events; no DevTools recording or unbounded memory growth.
+- `/api/bcdp/*` now delegates to DSH `connection.admit` rather than trusting the mere presence of a `dsh-auth-*` cookie name.
+- The watch tab remains registered but is no longer auto-opened; the user opens it explicitly.
+- Added `tests/diagnostics-store.test.ts` and `.github/workflows/ci.yml` (typecheck, tests, build, checked-in artifact check).
+- Fixed two cross-platform test failures: explicit `platform` now reaches Windows `gfxcapture` argument construction, and Windows Local State profile paths use `win32.join` when parsing on a non-Windows runner.
+
 ## 1.7.4 (2026-10-28)
 
 **issue #4 根治：悬浮球/面板位置持久化改视口比例制（百分位）+ resize 实时重摆。**

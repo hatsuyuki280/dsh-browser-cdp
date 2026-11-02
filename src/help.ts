@@ -10,7 +10,7 @@ export const EGO_HELP_INDEX: Record<string, string> = {
     'If a bcdp_* tool is missing from your list, read topic=injection first: tools are tiered and only core stays resident. ' +
     '分类见: tools / navigate / observe / input / keyboard-mouse / form / wait / network / login / script / doctor / lightpanda / injection。用 `topic` 查询，或直接给工具名。',
   tools:
-    '工具清单: bcdp_status, bcdp_space(+op:open/close/list/handoff/takeover), bcdp_snapshot, bcdp_navigate, bcdp_tab, bcdp_click(+double), bcdp_fill, bcdp_js, bcdp_cdp, bcdp_screenshot(+selector), bcdp_page_info, bcdp_wait(+op:duration/selector/url/response/load/function/request/event), bcdp_key(+text/type/insert), bcdp_hover, bcdp_read_element, bcdp_select, bcdp_drag, bcdp_scroll, bcdp_upload, bcdp_check, bcdp_dialog, bcdp_download, bcdp_http, bcdp_captcha, bcdp_auth_flush, bcdp_login_import, bcdp_help, bcdp_doctor, bcdp_script(+verbatim), bcdp_jev_status, bcdp_jev_frame, bcdp_jev_attempt, bcdp_jev_ask, bcdp_jev_run。',
+    '工具清单: bcdp_status, bcdp_space(+op:open/close/list/handoff/takeover), bcdp_snapshot, bcdp_navigate, bcdp_tab, bcdp_click(+double), bcdp_fill, bcdp_js, bcdp_cdp, bcdp_screenshot(+selector), bcdp_page_info, bcdp_wait(+op:duration/selector/url/response/load/function/request/event), bcdp_key(+text/type/insert), bcdp_hover, bcdp_read_element, bcdp_select, bcdp_drag, bcdp_scroll, bcdp_upload, bcdp_check, bcdp_dialog, bcdp_download, bcdp_http, bcdp_captcha, bcdp_auth_flush, bcdp_login_import, bcdp_diagnostics(+kind:network/console/pdf), bcdp_help, bcdp_doctor, bcdp_script(+verbatim), bcdp_jev_status, bcdp_jev_frame, bcdp_jev_attempt, bcdp_jev_ask, bcdp_jev_run。',
   links:
     '连接序列（设置面板）：有序列表，顺序即优先级，被激活的一项驱动每一次 bcdp_* 调用。两种类型——' +
     'CDP 端点（注入 EGO_LINUX_CDP_URL，指向已开调试端口的浏览器）与 本机 ego CLI（不注入端点，由本机 ego CLI 直接驱动 ego 浏览器；' +
@@ -25,7 +25,9 @@ export const EGO_HELP_INDEX: Record<string, string> = {
   form: 'bcdp_fill 填输入框; bcdp_select 下拉; bcdp_check checkbox/radio; bcdp_upload 文件; bcdp_key 回车/Tab导航; bcdp_dialog 处理提交弹窗。',
   wait: 'bcdp_wait 一个工具八个 op：duration(固定毫秒); selector(等元素出现/消失, 可带 state); url(等跳转); response(等网络响应, body=text|json 可读体); load(等加载状态); function(页内表达式变真); request(等请求); event(等下载)。',
   network:
-    'bcdp_http: 发HTTP请求(默认浏览器上下文 fetch.browser, mode=server走Node fetch.server); bcdp_wait op=response: 等并读接口响应。',
+    'bcdp_http: 发HTTP请求(默认浏览器上下文 fetch.browser, mode=server走Node fetch.server); bcdp_wait op=response: 等并读接口响应; bcdp_diagnostics kind=network: 读最近请求/响应(方法/URL/状态/类型/耗时/失败原因)。',
+  diagnostics:
+    'bcdp_diagnostics: 可选诊断工具(kind=network|console|pdf)。network/console 读取当前 target 的最近事件(1-300 条，默认 50)，用于排查接口、页面报错和控制台错误；pdf 用 Page.printToPDF 保存当前页到本地并返回 path。network/console 需要 worker 正在运行；targetId 可省略(默认为 worker active target)。',
   download: 'bcdp_download: 等下载事件并落到指定路径(triggerSelector/triggerScript + 可选 savePath)。',
   captcha: 'bcdp_captcha: 检测页面人机验证(CAPTCHA)并返回{detected,kind}; 检测到请让用户去 ego 浏览器完成; bcdp_page_info 也附带 humanCheck。',
   login: 'bcdp_auth_flush: 把登录cookie落盘到ego profile; 观察窗登录引导条+『已登录,保存』按钮触发同一动作。bcdp_login_import: 从系统浏览器(Chrome/Edge/Brave)按域名导入登录cookie(source/domains/dryRun; 先dryRun看可导入项; ego浏览器须已在运行)。',

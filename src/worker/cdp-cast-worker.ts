@@ -413,6 +413,43 @@ async function main(): Promise<void> {
     try {
       if (req.method === 'GET' && url.pathname === '/api/health') return sendJson(res, 200, { workerOk: true, browserConnected: !!active, capture: manager.status() })
       if (req.method === 'GET' && url.pathname === '/api/spaces') return sendJson(res, 200, { ok: true, spaces: active ? await snapshotSpaces() : [], capture: manager.status() })
+      if (req.method === 'GET' && url.pathname === '/api/diagnostics') {
+        if (!active) return sendJson(res, 409, { ok: false, error: 'no live browser' })
+        const kind = url.searchParams.get('kind')
+        if (kind !== 'network' && kind !== 'console') return sendJson(res, 400, { ok: false, error: 'kind must be network or console' })
+        const targetId = url.searchParams.get('targetId') || await activeTargetId()
+        if (!targetId) return sendJson(res, 409, { ok: false, error: 'no active target' })
+        const rawLimit = Number(url.searchParams.get('limit') ?? 50)
+        const limit = Number.isFinite(rawLimit) ? Math.min(300, Math.max(1, Math.floor(rawLimit))) : 50
+        return sendJson(res, 200, {
+          ok: true,
+          kind,
+          targetId,
+          entries: active.sessions.diagnostics.snapshot(targetId, kind, limit),
+        })
+      }
+      if (req.method === 'POST' && url.pathname === '/api/pdf') {
+        if (!active) return sendJson(res, 409, { ok: false, error: 'no live browser' })
+        const body = await readJson(req, 32 * 1024)
+        const targetId = typeof body.targetId === 'string' && body.targetId !== '' ? body.targetId : await activeTargetId()
+        if (!targetId) return sendJson(res, 409, { ok: false, error: 'no active target' })
+        const options: Record<string, unknown> = {
+          printBackground: body.printBackground !== false,
+        }
+        if (typeof body.scale === 'number' && body.scale > 0 && body.scale <= 2) options.scale = body.scale
+        if (typeof body.landscape === 'boolean') options.landscape = body.landscape
+        if (typeof body.paperWidth === 'number' && body.paperWidth > 0) options.paperWidth = body.paperWidth
+        if (typeof body.paperHeight === 'number' && body.paperHeight > 0) options.paperHeight = body.paperHeight
+        try {
+          const result = await active.sessions.call(targetId, 'Page.printToPDF', options, 30_000) as { data?: unknown }
+          const data = typeof result.data === 'string' ? result.data : ''
+          if (data === '') return sendJson(res, 502, { ok: false, error: 'Page.printToPDF returned no data' })
+          if (data.length > 40 * 1024 * 1024) return sendJson(res, 413, { ok: false, error: 'PDF exceeds 40 MiB (base64)' })
+          return sendJson(res, 200, { ok: true, targetId, mime: 'application/pdf', data })
+        } catch (error) {
+          return sendJson(res, 503, { ok: false, error: (error as Error).message || String(error) })
+        }
+      }
       if (req.method === 'GET' && url.pathname === '/api/watch/status') return sendJson(res, 200, { ok: true, ...manager.status() })
       if (req.method === 'GET' && url.pathname === '/api/video/status') return sendJson(res, 200, { ok: true, ...manager.status(), mime: videoInit?.mime || null })
       if (req.method === 'POST' && url.pathname === '/api/config') { castConfig = normalizeConfig(await readJson(req)); await manager.updateConfig(); return sendJson(res, 200, { ok: true, config: castConfig }) }

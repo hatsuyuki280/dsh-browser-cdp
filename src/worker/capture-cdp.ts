@@ -1,4 +1,5 @@
 import type { CdpClient } from './cdp-client.ts'
+import { DiagnosticsStore } from './diagnostics.ts'
 
 interface Session {
   targetId: string
@@ -19,16 +20,19 @@ interface JpegFrame {
 export class TargetSessions {
   cdp: CdpClient
   sessions: Map<string, Session>
+  diagnostics: DiagnosticsStore
   detachDestroyed: () => void
   destroyedHandlers: Set<(targetId: string) => void>
 
   constructor(cdp: CdpClient) {
     this.cdp = cdp
     this.sessions = new Map()
+    this.diagnostics = new DiagnosticsStore(cdp)
     this.detachDestroyed = cdp.on('Target.targetDestroyed', (params: unknown) => {
       const { targetId } = params as { targetId?: string }
       if (!targetId) return
       this.sessions.delete(targetId)
+      this.diagnostics.clear(targetId)
       for (const handler of this.destroyedHandlers || []) handler(targetId)
     })
     this.destroyedHandlers = new Set()
@@ -40,9 +44,12 @@ export class TargetSessions {
     if (!result.sessionId) throw new Error(`CDP did not return a session for ${targetId}`)
     const session: Session = { targetId, sessionId: result.sessionId, viewportW: null, viewportH: null }
     this.sessions.set(targetId, session)
+    this.diagnostics.bind(session.sessionId, targetId)
     await Promise.allSettled([
       this.cdp.call('Page.enable', {}, session.sessionId),
       this.cdp.call('Runtime.enable', {}, session.sessionId),
+      this.cdp.call('Network.enable', {}, session.sessionId),
+      this.cdp.call('Log.enable', {}, session.sessionId),
     ])
     await this.updateViewport(targetId)
     return session

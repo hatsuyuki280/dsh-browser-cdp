@@ -37,7 +37,7 @@ import { mkdir, readFile, rm, symlink } from 'node:fs/promises'
 import { execFile as execFileCb } from 'node:child_process'
 import { promisify } from 'node:util'
 import { tmpdir } from 'node:os'
-import { join, basename } from 'node:path'
+import { join, basename, win32 } from 'node:path'
 import { CdpClient } from './worker/cdp-client.ts'
 
 const execFile = promisify(execFileCb)
@@ -106,12 +106,16 @@ export function profilesFromLocalState(localStateJson: string, userDataDir: stri
   try {
     const j = JSON.parse(localStateJson) as { profile?: { info_cache?: Record<string, { name?: string }> } }
     const cache = j.profile?.info_cache || {}
+    // This parser is also exercised with Windows Local State paths on non-Windows
+    // test runners; path.join() would replace the separator and corrupt them.
+    const profileJoin = (base: string, name: string): string =>
+      base.includes('\\') ? win32.join(base, name) : join(base, name)
     const out = Object.entries(cache).map(([dirName, info]) => ({
-      dir: join(userDataDir, dirName),
+      dir: profileJoin(userDataDir, dirName),
       dirName,
       name: (info && typeof info.name === 'string' && info.name) || dirName,
     }))
-    return out.length ? out : [{ dir: join(userDataDir, 'Default'), dirName: 'Default', name: 'Default' }]
+    return out.length ? out : [{ dir: profileJoin(userDataDir, 'Default'), dirName: 'Default', name: 'Default' }]
   } catch {
     return [{ dir: join(userDataDir, 'Default'), dirName: 'Default', name: 'Default' }]
   }

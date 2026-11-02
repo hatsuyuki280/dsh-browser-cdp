@@ -74,6 +74,7 @@ const POWER = [
   'bcdp_upload',
   'bcdp_download',
   'bcdp_dialog',
+  'bcdp_diagnostics',
 ] as const
 const SESSION = [
   'bcdp_captcha',

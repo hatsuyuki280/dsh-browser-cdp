@@ -35,8 +35,8 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var __require = /* @__PURE__ */ createRequire(import.meta.url);
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/constants.js
-var require_constants = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/constants.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/constants.js
+var require_constants = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/constants.js": ((exports, module) => {
 	const BINARY_TYPES$2 = [
 		"nodebuffer",
 		"arraybuffer",
@@ -59,8 +59,9 @@ var require_constants = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/buffer-util.js
-var require_buffer_util = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/buffer-util.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/buffer-util.js
+var require_buffer_util = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/buffer-util.js": ((exports, module) => {
+	const { websocketMask, websocketUnmask } = __require("http");
 	const { EMPTY_BUFFER: EMPTY_BUFFER$3 } = require_constants();
 	const FastBuffer$2 = Buffer[Symbol.species];
 	/**
@@ -145,8 +146,16 @@ var require_buffer_util = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.
 		toBuffer: toBuffer$2,
 		unmask: _unmask
 	};
-	/* istanbul ignore else  */
-	if (!process.env.WS_NO_BUFFER_UTIL) try {
+	if (websocketMask) {
+		module.exports.mask = function(source, mask, output, offset, length) {
+			if (length < 24) _mask(source, mask, output, offset, length);
+			else websocketMask(source, mask, output, offset, length);
+		};
+		module.exports.unmask = function(buffer, mask) {
+			if (buffer.length < 24) _unmask(buffer, mask);
+			else websocketUnmask(buffer, mask);
+		};
+	} else if (!process.env.WS_NO_BUFFER_UTIL) try {
 		const bufferUtil$1 = __require("bufferutil");
 		module.exports.mask = function(source, mask, output, offset, length) {
 			if (length < 48) _mask(source, mask, output, offset, length);
@@ -160,8 +169,8 @@ var require_buffer_util = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/limiter.js
-var require_limiter = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/limiter.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/limiter.js
+var require_limiter = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/limiter.js": ((exports, module) => {
 	const kDone = Symbol("kDone");
 	const kRun = Symbol("kRun");
 	/**
@@ -212,8 +221,8 @@ var require_limiter = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/permessage-deflate.js
-var require_permessage_deflate = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/permessage-deflate.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/permessage-deflate.js
+var require_permessage_deflate = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/permessage-deflate.js": ((exports, module) => {
 	const zlib = __require("zlib");
 	const bufferUtil = require_buffer_util();
 	const Limiter = require_limiter();
@@ -546,8 +555,8 @@ var require_permessage_deflate = /* @__PURE__ */ __commonJS({ "node_modules/.pnp
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/validation.js
-var require_validation = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/validation.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/validation.js
+var require_validation = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/validation.js": ((exports, module) => {
 	const { isUtf8 } = __require("buffer");
 	const { hasBlob } = require_constants();
 	const tokenChars$2 = [
@@ -743,8 +752,8 @@ var require_validation = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.2
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/receiver.js
-var require_receiver = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/receiver.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/receiver.js
+var require_receiver = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/receiver.js": ((exports, module) => {
 	const { Writable } = __require("stream");
 	const PerMessageDeflate$4 = require_permessage_deflate();
 	const { BINARY_TYPES: BINARY_TYPES$1, EMPTY_BUFFER: EMPTY_BUFFER$2, kStatusCode: kStatusCode$1, kWebSocket: kWebSocket$3 } = require_constants();
@@ -1207,8 +1216,8 @@ var require_receiver = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/sender.js
-var require_sender = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/sender.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/sender.js
+var require_sender = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/sender.js": ((exports, module) => {
 	const { Duplex: Duplex$3 } = __require("stream");
 	const { randomFillSync } = __require("crypto");
 	const { types: { isUint8Array } } = __require("util");
@@ -1322,12 +1331,13 @@ var require_sender = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/
 				target[2] = target[3] = 0;
 				target.writeUIntBE(dataLength, 4, 6);
 			}
-			if (!options.mask) return [target, data];
+			if (!options.mask) return dataLength ? [target, data] : [target];
 			target[1] |= 128;
 			target[offset - 4] = mask[0];
 			target[offset - 3] = mask[1];
 			target[offset - 2] = mask[2];
 			target[offset - 1] = mask[3];
+			if (!dataLength) return [target];
 			if (skipMasking) return [target, data];
 			if (merge) {
 				applyMask(data, mask, target, offset, dataLength);
@@ -1705,8 +1715,8 @@ var require_sender = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/event-target.js
-var require_event_target = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/event-target.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/event-target.js
+var require_event_target = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/event-target.js": ((exports, module) => {
 	const { kForOnEventAttribute: kForOnEventAttribute$1, kListener: kListener$1 } = require_constants();
 	const kCode = Symbol("kCode");
 	const kData = Symbol("kData");
@@ -1925,8 +1935,8 @@ var require_event_target = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/extension.js
-var require_extension = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/extension.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/extension.js
+var require_extension = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/extension.js": ((exports, module) => {
 	const { tokenChars: tokenChars$1 } = require_validation();
 	/**
 	* Adds an offer to the map of extension offers or a parameter to the map of
@@ -2069,8 +2079,8 @@ var require_extension = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket.js
-var require_websocket = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/websocket.js
+var require_websocket = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/websocket.js": ((exports, module) => {
 	const EventEmitter$1 = __require("events");
 	const https = __require("https");
 	const http$1 = __require("http");
@@ -2129,10 +2139,14 @@ var require_websocket = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21
 				this._bufferedAmount = 0;
 				this._isServer = false;
 				this._redirects = 0;
-				if (protocols === void 0) protocols = [];
+				if (protocols === void 0) if (!options || options.protocols === void 0) protocols = [];
+				else if (Array.isArray(options.protocols)) protocols = options.protocols;
+				else protocols = [options.protocols];
 				else if (!Array.isArray(protocols)) if (typeof protocols === "object" && protocols !== null) {
 					options = protocols;
-					protocols = [];
+					if (options.protocols === void 0) protocols = [];
+					else if (Array.isArray(options.protocols)) protocols = options.protocols;
+					else protocols = [options.protocols];
 				} else protocols = [protocols];
 				initAsClient(this, address, protocols, options);
 			} else {
@@ -2321,12 +2335,12 @@ var require_websocket = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21
 				if (this._closeFrameSent && (this._closeFrameReceived || this._receiver._writableState.errorEmitted)) this._socket.end();
 				return;
 			}
-			this._readyState = WebSocket$3.CLOSING;
 			this._sender.close(code, data, !this._isServer, (err) => {
 				if (err) return;
 				this._closeFrameSent = true;
 				if (this._closeFrameReceived || this._receiver._writableState.errorEmitted) this._socket.end();
 			});
+			this._readyState = WebSocket$3.CLOSING;
 			setCloseTimer(this);
 		}
 		/**
@@ -2609,6 +2623,7 @@ var require_websocket = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21
 			socketPath: void 0,
 			hostname: void 0,
 			protocol: void 0,
+			protocols: void 0,
 			timeout: void 0,
 			method: "GET",
 			host: void 0,
@@ -2679,9 +2694,14 @@ var require_websocket = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21
 		else opts.headers.Origin = opts.origin;
 		if (parsedUrl.username || parsedUrl.password) opts.auth = `${parsedUrl.username}:${parsedUrl.password}`;
 		if (isIpcUrl) {
-			const parts = opts.path.split(":");
-			opts.socketPath = parts[0];
-			opts.path = parts[1];
+			const i = opts.path.indexOf(":");
+			if (i === -1) {
+				opts.socketPath = opts.path;
+				opts.path = "";
+			} else {
+				opts.socketPath = opts.path.slice(0, i);
+				opts.path = opts.path.slice(i + 1);
+			}
 		}
 		let req;
 		if (opts.followRedirects) {
@@ -3059,8 +3079,8 @@ var require_websocket = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/stream.js
-var require_stream = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/stream.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/stream.js
+var require_stream = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/stream.js": ((exports, module) => {
 	require_websocket();
 	const { Duplex: Duplex$1 } = __require("stream");
 	/**
@@ -3176,8 +3196,8 @@ var require_stream = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/subprotocol.js
-var require_subprotocol = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/subprotocol.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/subprotocol.js
+var require_subprotocol = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/subprotocol.js": ((exports, module) => {
 	const { tokenChars } = require_validation();
 	/**
 	* Parses the `Sec-WebSocket-Protocol` header into a set of subprotocol names.
@@ -3216,8 +3236,8 @@ var require_subprotocol = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket-server.js
-var require_websocket_server = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket-server.js": ((exports, module) => {
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/websocket-server.js
+var require_websocket_server = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ws@8.22.1/node_modules/ws/lib/websocket-server.js": ((exports, module) => {
 	const EventEmitter = __require("events");
 	const http = __require("http");
 	const { Duplex } = __require("stream");
@@ -3603,7 +3623,7 @@ var require_websocket_server = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/ws@8.21.3/node_modules/ws/wrapper.mjs
+//#region node_modules/.pnpm/ws@8.22.1/node_modules/ws/wrapper.mjs
 var import_stream = /* @__PURE__ */ __toESM(require_stream(), 1);
 var import_extension = /* @__PURE__ */ __toESM(require_extension(), 1);
 var import_permessage_deflate = /* @__PURE__ */ __toESM(require_permessage_deflate(), 1);
@@ -3698,19 +3718,187 @@ var CdpClient = class {
 };
 
 //#endregion
+//#region src/worker/diagnostics.ts
+const MAX_ENTRIES = 300;
+const MAX_TEXT = 4e3;
+const clampLimit = (value, fallback = 50) => {
+	const n = Number(value);
+	if (!Number.isFinite(n)) return fallback;
+	return Math.min(MAX_ENTRIES, Math.max(1, Math.floor(n)));
+};
+const clip = (value, max = MAX_TEXT) => {
+	const text = typeof value === "string" ? value : value == null ? "" : String(value);
+	return text.length > max ? `${text.slice(0, max)}…[truncated]` : text;
+};
+/** Best-effort readable text for a Runtime.RemoteObject. */
+function remoteObjectText(value) {
+	if (value == null || typeof value !== "object") return clip(value);
+	const object = value;
+	if (object.value !== void 0) return clip(object.value);
+	if (object.unserializableValue !== void 0) return clip(object.unserializableValue);
+	if (object.description !== void 0) return clip(object.description);
+	return clip(object.type);
+}
+function pushBounded(map, targetId, entry) {
+	const list = map.get(targetId) ?? [];
+	list.push(entry);
+	if (list.length > MAX_ENTRIES) list.splice(0, list.length - MAX_ENTRIES);
+	map.set(targetId, list);
+}
+var DiagnosticsStore = class {
+	#cdp;
+	#sessionTargets = /* @__PURE__ */ new Map();
+	#console = /* @__PURE__ */ new Map();
+	#network = /* @__PURE__ */ new Map();
+	#pending = /* @__PURE__ */ new Map();
+	constructor(cdp) {
+		this.#cdp = cdp;
+		cdp.on("Runtime.consoleAPICalled", (params, sessionId) => {
+			const targetId = this.#targetOf(sessionId);
+			if (!targetId) return;
+			const p = params;
+			const level = typeof p.type === "string" ? p.type : "log";
+			const text = Array.isArray(p.args) ? p.args.map(remoteObjectText).join(" ") : "";
+			pushBounded(this.#console, targetId, {
+				ts: Date.now(),
+				targetId,
+				level,
+				text
+			});
+		});
+		cdp.on("Runtime.exceptionThrown", (params, sessionId) => {
+			const targetId = this.#targetOf(sessionId);
+			if (!targetId) return;
+			const details = params.exceptionDetails ?? {};
+			const text = details.exception?.description ?? details.text ?? "Uncaught exception";
+			pushBounded(this.#console, targetId, {
+				ts: Date.now(),
+				targetId,
+				level: "error",
+				text: clip(text),
+				...typeof details.url === "string" ? { url: details.url } : {},
+				...typeof details.lineNumber === "number" ? { line: details.lineNumber } : {}
+			});
+		});
+		cdp.on("Log.entryAdded", (params, sessionId) => {
+			const targetId = this.#targetOf(sessionId);
+			if (!targetId) return;
+			const entry = params.entry ?? {};
+			pushBounded(this.#console, targetId, {
+				ts: Date.now(),
+				targetId,
+				level: typeof entry.level === "string" ? entry.level : "log",
+				text: clip(entry.text),
+				...typeof entry.source === "string" ? { source: entry.source } : {},
+				...typeof entry.url === "string" ? { url: entry.url } : {},
+				...typeof entry.lineNumber === "number" ? { line: entry.lineNumber } : {}
+			});
+		});
+		cdp.on("Network.requestWillBeSent", (params, sessionId) => {
+			const targetId = this.#targetOf(sessionId);
+			if (!targetId) return;
+			const p = params;
+			const requestId = typeof p.requestId === "string" ? p.requestId : "";
+			if (requestId === "") return;
+			const request = p.request ?? {};
+			const startedAt = typeof p.timestamp === "number" ? p.timestamp : Date.now() / 1e3;
+			this.#pending.set(requestId, {
+				targetId,
+				startedAt,
+				method: typeof request.method === "string" ? request.method : "GET",
+				url: clip(request.url),
+				...typeof p.type === "string" ? { resourceType: p.type } : {}
+			});
+		});
+		cdp.on("Network.responseReceived", (params, sessionId) => {
+			const targetId = this.#targetOf(sessionId);
+			if (!targetId) return;
+			const p = params;
+			const requestId = typeof p.requestId === "string" ? p.requestId : "";
+			if (requestId === "") return;
+			const pending = this.#pending.get(requestId);
+			const response = p.response ?? {};
+			const entry = {
+				ts: Date.now(),
+				targetId,
+				requestId,
+				method: pending?.method ?? "GET",
+				url: pending?.url ?? "",
+				...pending?.resourceType ? { resourceType: pending.resourceType } : {},
+				...typeof response.status === "number" ? { status: response.status } : {},
+				...typeof response.statusText === "string" ? { statusText: response.statusText } : {},
+				...typeof response.mimeType === "string" ? { mimeType: response.mimeType } : {},
+				...typeof p.timestamp === "number" ? { durationMs: Math.max(0, Math.round((p.timestamp - (pending?.startedAt ?? p.timestamp)) * 1e3)) } : {}
+			};
+			pushBounded(this.#network, targetId, entry);
+		});
+		cdp.on("Network.loadingFinished", (params, sessionId) => {
+			const targetId = this.#targetOf(sessionId);
+			if (!targetId) return;
+			const p = params;
+			const requestId = typeof p.requestId === "string" ? p.requestId : "";
+			if (requestId === "") return;
+			const pending = this.#pending.get(requestId);
+			if (!pending) return;
+			const entry = [...this.#network.get(targetId) ?? []].reverse().find((item) => item.requestId === requestId);
+			if (entry && typeof p.timestamp === "number") entry.durationMs = Math.max(0, Math.round((p.timestamp - pending.startedAt) * 1e3));
+			this.#pending.delete(requestId);
+		});
+		cdp.on("Network.loadingFailed", (params, sessionId) => {
+			const targetId = this.#targetOf(sessionId);
+			if (!targetId) return;
+			const p = params;
+			const requestId = typeof p.requestId === "string" ? p.requestId : "";
+			if (requestId === "") return;
+			const pending = this.#pending.get(requestId);
+			this.#pending.delete(requestId);
+			pushBounded(this.#network, targetId, {
+				ts: Date.now(),
+				targetId,
+				requestId,
+				method: pending?.method ?? "GET",
+				url: pending?.url ?? "",
+				...pending?.resourceType ? { resourceType: pending.resourceType } : {},
+				failed: true,
+				errorText: clip(p.errorText ?? (p.canceled === true ? "canceled" : "request failed")),
+				...typeof p.timestamp === "number" && pending ? { durationMs: Math.max(0, Math.round((p.timestamp - pending.startedAt) * 1e3)) } : {}
+			});
+		});
+	}
+	#targetOf(sessionId) {
+		return sessionId === void 0 ? void 0 : this.#sessionTargets.get(sessionId);
+	}
+	bind(sessionId, targetId) {
+		this.#sessionTargets.set(sessionId, targetId);
+	}
+	clear(targetId) {
+		this.#console.delete(targetId);
+		this.#network.delete(targetId);
+		for (const [requestId, pending] of this.#pending) if (pending.targetId === targetId) this.#pending.delete(requestId);
+	}
+	snapshot(targetId, kind, limit = 50) {
+		const count = clampLimit(limit);
+		return ((kind === "console" ? this.#console.get(targetId) : this.#network.get(targetId)) ?? []).slice(-count);
+	}
+};
+
+//#endregion
 //#region src/worker/capture-cdp.ts
 var TargetSessions = class {
 	cdp;
 	sessions;
+	diagnostics;
 	detachDestroyed;
 	destroyedHandlers;
 	constructor(cdp) {
 		this.cdp = cdp;
 		this.sessions = /* @__PURE__ */ new Map();
+		this.diagnostics = new DiagnosticsStore(cdp);
 		this.detachDestroyed = cdp.on("Target.targetDestroyed", (params) => {
 			const { targetId } = params;
 			if (!targetId) return;
 			this.sessions.delete(targetId);
+			this.diagnostics.clear(targetId);
 			for (const handler of this.destroyedHandlers || []) handler(targetId);
 		});
 		this.destroyedHandlers = /* @__PURE__ */ new Set();
@@ -3729,7 +3917,13 @@ var TargetSessions = class {
 			viewportH: null
 		};
 		this.sessions.set(targetId, session);
-		await Promise.allSettled([this.cdp.call("Page.enable", {}, session.sessionId), this.cdp.call("Runtime.enable", {}, session.sessionId)]);
+		this.diagnostics.bind(session.sessionId, targetId);
+		await Promise.allSettled([
+			this.cdp.call("Page.enable", {}, session.sessionId),
+			this.cdp.call("Runtime.enable", {}, session.sessionId),
+			this.cdp.call("Network.enable", {}, session.sessionId),
+			this.cdp.call("Log.enable", {}, session.sessionId)
+		]);
 		await this.updateViewport(targetId);
 		return session;
 	}
@@ -4778,6 +4972,7 @@ async function selectEncoder(path, requested, spawn$1 = defaultSpawn, capture = 
 			"-loglevel",
 			"error",
 			...platform$1 === "win32" && capture?.source ? buildCaptureInput({
+				platform: platform$1,
 				source: capture.source,
 				fps: capture.fps,
 				maxWidth: capture.maxWidth,
@@ -6796,6 +6991,70 @@ async function main() {
 				spaces: active ? await snapshotSpaces() : [],
 				capture: manager.status()
 			});
+			if (req.method === "GET" && url.pathname === "/api/diagnostics") {
+				if (!active) return sendJson(res, 409, {
+					ok: false,
+					error: "no live browser"
+				});
+				const kind = url.searchParams.get("kind");
+				if (kind !== "network" && kind !== "console") return sendJson(res, 400, {
+					ok: false,
+					error: "kind must be network or console"
+				});
+				const targetId = url.searchParams.get("targetId") || await activeTargetId();
+				if (!targetId) return sendJson(res, 409, {
+					ok: false,
+					error: "no active target"
+				});
+				const rawLimit = Number(url.searchParams.get("limit") ?? 50);
+				const limit = Number.isFinite(rawLimit) ? Math.min(300, Math.max(1, Math.floor(rawLimit))) : 50;
+				return sendJson(res, 200, {
+					ok: true,
+					kind,
+					targetId,
+					entries: active.sessions.diagnostics.snapshot(targetId, kind, limit)
+				});
+			}
+			if (req.method === "POST" && url.pathname === "/api/pdf") {
+				if (!active) return sendJson(res, 409, {
+					ok: false,
+					error: "no live browser"
+				});
+				const body = await readJson(req, 32 * 1024);
+				const targetId = typeof body.targetId === "string" && body.targetId !== "" ? body.targetId : await activeTargetId();
+				if (!targetId) return sendJson(res, 409, {
+					ok: false,
+					error: "no active target"
+				});
+				const options = { printBackground: body.printBackground !== false };
+				if (typeof body.scale === "number" && body.scale > 0 && body.scale <= 2) options.scale = body.scale;
+				if (typeof body.landscape === "boolean") options.landscape = body.landscape;
+				if (typeof body.paperWidth === "number" && body.paperWidth > 0) options.paperWidth = body.paperWidth;
+				if (typeof body.paperHeight === "number" && body.paperHeight > 0) options.paperHeight = body.paperHeight;
+				try {
+					const result = await active.sessions.call(targetId, "Page.printToPDF", options, 3e4);
+					const data = typeof result.data === "string" ? result.data : "";
+					if (data === "") return sendJson(res, 502, {
+						ok: false,
+						error: "Page.printToPDF returned no data"
+					});
+					if (data.length > 40 * 1024 * 1024) return sendJson(res, 413, {
+						ok: false,
+						error: "PDF exceeds 40 MiB (base64)"
+					});
+					return sendJson(res, 200, {
+						ok: true,
+						targetId,
+						mime: "application/pdf",
+						data
+					});
+				} catch (error) {
+					return sendJson(res, 503, {
+						ok: false,
+						error: error.message || String(error)
+					});
+				}
+			}
 			if (req.method === "GET" && url.pathname === "/api/watch/status") return sendJson(res, 200, {
 				ok: true,
 				...manager.status()

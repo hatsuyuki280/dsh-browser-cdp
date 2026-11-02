@@ -31,10 +31,12 @@
  * 加工具：�?registerActionTools �?reg(t({...}))，并同步 EGO_HELP_INDEX，跑 npm run build�? */
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { existsSync, readdirSync } from 'node:fs'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { importLoginCookies } from './login-import.ts'
-import { initCastServer, markEgoToolCall, getLastEgoActivity, onEgoActivity, setAttachEndpoint, recycleWorker } from './cast-server.ts'
+import { initCastServer, markEgoToolCall, getLastEgoActivity, onEgoActivity, setAttachEndpoint, recycleWorker, readWorkerDiagnostics, printWorkerPdf } from './cast-server.ts'
 import { registerEgoBrowserGateway } from './gateway.ts'
 import { EGO_HELP_INDEX } from './help.ts'
 import { HUMAN_CHECK_PROBE } from './captcha.ts'
@@ -2180,8 +2182,74 @@ function registerLoginImport(ctx: EgoContext, cfg: EgoRuntimeConfig, reg: (tool:
     } as unknown as DefineToolOpts),
   )
 }
+function registerDiagnosticsTool(ctx: EgoContext, cfg: EgoRuntimeConfig, reg: (tool: ToolHandle) => void): void {
+  reg(
+    defineTool({
+      name: 'bcdp_diagnostics',
+      description:
+        'Read recent network requests or console/page errors from the current CDP browser, or render the current page to PDF. This is an optional diagnostic tool (toolExtended): use kind=network|console before guessing why a page failed; use kind=pdf to save a PDF and return its local path.',
+      parameters: {
+        kind: { type: 'string', required: true, description: 'network | console | pdf' },
+        limit: { type: 'number', description: 'For network/console: newest entries to return (1-300, default 50).' },
+        targetId: { type: 'string', description: 'Optional CDP target id; defaults to the worker active target.' },
+        path: { type: 'string', description: 'For pdf: output path. Defaults to ~/.dsh/browser-cdp-pdfs/page-<timestamp>.pdf.' },
+        printBackground: { type: 'boolean', description: 'For pdf: print CSS backgrounds (default true).' },
+        scale: { type: 'number', description: 'For pdf: scale 0.1-2 (default browser value).' },
+        landscape: { type: 'boolean', description: 'For pdf: landscape orientation.' },
+      },
+      output: { schema: commonOutputSchema, render: renderText },
+      timeoutMs: 60_000,
+      execute: async (args: Record<string, unknown>, exec: ToolExec) =>
+        withEgoLock(async () => {
+          cfg.spaceTracker.setCurrentSession(callingSessionId(exec))
+          markEgoToolCall(callingSessionId(exec))
+          const kind = typeof args.kind === 'string' ? args.kind.trim().toLowerCase() : ''
+          const targetId = typeof args.targetId === 'string' && args.targetId.trim() !== '' ? args.targetId.trim() : undefined
+          if (kind === 'network' || kind === 'console') {
+            const rawLimit = Number(args.limit)
+            const limit = Number.isFinite(rawLimit) ? Math.min(300, Math.max(1, Math.floor(rawLimit))) : 50
+            const result = await readWorkerDiagnostics(kind, limit, targetId)
+            if (result === null) {
+              return { ok: false, kind, error: 'browser worker is not running — call bcdp_status or a browser tool first' }
+            }
+            return result
+          }
+          if (kind === 'pdf') {
+            const result = await printWorkerPdf({
+              ...(targetId ? { targetId } : {}),
+              printBackground: args.printBackground !== false,
+              ...(typeof args.scale === 'number' ? { scale: args.scale } : {}),
+              ...(typeof args.landscape === 'boolean' ? { landscape: args.landscape } : {}),
+            })
+            if (result === null) return { ok: false, kind, error: 'browser worker is not running — call bcdp_status or a browser tool first' }
+            const body = result.body as { ok?: unknown; data?: unknown; targetId?: unknown; error?: unknown }
+            if (result.status !== 200 || body.ok !== true || typeof body.data !== 'string') {
+              return { ok: false, kind, error: typeof body.error === 'string' ? body.error : `PDF worker returned ${result.status}` }
+            }
+            const out = typeof args.path === 'string' && args.path.trim() !== ''
+              ? resolve(args.path.trim())
+              : join(homedir(), '.dsh', 'browser-cdp-pdfs', `page-${Date.now()}.pdf`)
+            const bytes = Buffer.from(body.data, 'base64')
+            await mkdir(dirname(out), { recursive: true })
+            await writeFile(out, bytes)
+            return {
+              ok: true,
+              kind,
+              path: out,
+              bytes: bytes.length,
+              ...(typeof body.targetId === 'string' ? { targetId: body.targetId } : targetId ? { targetId } : {}),
+            }
+          }
+          return { ok: false, error: 'kind must be network, console, or pdf' }
+        }),
+      presentCall: () => ({ card: 'generic', title: 'bcdp_diagnostics', kind: 'other', rawInput: null }),
+    } as unknown as DefineToolOpts),
+  )
+}
+
 /** The structured action tools that drive `ego-browser nodejs`. */
 function registerActionTools(ctx: EgoContext, cfg: EgoRuntimeConfig, reg: (tool: ToolHandle) => void): void {
+  registerDiagnosticsTool(ctx, cfg, reg)
   const t = (opts: EgoToolOptions): ToolHandle => defineEgoTool(ctx, cfg, {
     ...opts,
     afterExecute: (args, result) => {

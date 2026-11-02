@@ -229,6 +229,34 @@ export async function proxyPost(port: number, path: string, body: unknown, timeo
   }
 }
 
+/** Read a bounded network/console buffer from the live worker. */
+export async function readWorkerDiagnostics(
+  kind: 'network' | 'console',
+  limit = 50,
+  targetId?: string,
+): Promise<Record<string, unknown> | null> {
+  const state = await knownWorkerState()
+  if (state.port === null) return null
+  const query = new URLSearchParams({ kind, limit: String(limit) })
+  if (targetId) query.set('targetId', targetId)
+  const result = await proxyFrom(state.port, `/api/diagnostics?${query.toString()}`)
+  return result !== null && typeof result === 'object' ? result as Record<string, unknown> : null
+}
+
+/** Ask the live worker to render the current page to PDF (base64 payload). */
+export async function printWorkerPdf(options: {
+  targetId?: string
+  printBackground?: boolean
+  scale?: number
+  landscape?: boolean
+  paperWidth?: number
+  paperHeight?: number
+}): Promise<ProxyPostResult | null> {
+  const state = await knownWorkerState()
+  if (state.port === null) return null
+  return proxyPost(state.port, '/api/pdf', options, 30_000)
+}
+
 /**
  * Bridge the worker's SSE stream to the DSH watch panel.
  *
@@ -620,13 +648,22 @@ export function initCastServer(
   // ── trust fence for /api/bcdp/* ────────────────────────────────────────────
   // Exact-path routes match BEFORE the host's `/api` prefix trust-fence route,
   // so every handler below would otherwise answer unauthenticated requests.
-  // The host issues a `dsh-auth-<processKey>` cookie that is HttpOnly AND
-  // SameSite=Strict: a cross-site page (CSRF driver-by) never carries it, so
-  // requiring its mere presence closes the remote surface. A local process can
-  // still forge the header, but that is the same threat tier as the host's own
-  // token fence (a local process can read the process token too).
-  const isTrustedRequest = (req: IncomingMessage): boolean =>
-    /(?:^|;\s*)dsh-auth-[^=]+=/.test(String(req.headers.cookie ?? ''))
+  // A cookie *name* is not authentication: an arbitrary caller can invent
+  // `dsh-auth-x=1`. Delegate to DSH's connection admission, which verifies the
+  // authority-bound HMAC cookie and the Host/Origin fence in one place.
+  const connection = (ctx as EgoContext & {
+    get?: (name: string) => unknown
+  }).get?.('connection') as {
+    admit?: (req: IncomingMessage) => unknown
+  } | undefined
+  const isTrustedRequest = (req: IncomingMessage): boolean => {
+    try {
+      const admission = connection?.admit?.(req) as { rejection?: unknown } | undefined
+      return admission !== undefined && admission.rejection === undefined
+    } catch {
+      return false
+    }
+  }
   const guardHandler = (handler: NonNullable<RegisterRouteOptions['handler']>) =>
     async (req: unknown, resRaw: unknown) => {
       const res = resRaw as ServerResponse

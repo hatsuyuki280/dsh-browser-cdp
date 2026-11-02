@@ -37,7 +37,7 @@ describe("tier table coverage", () => {
     const listed = Object.values(TIER_MEMBERS).flat();
     // 双向对齐：源码里注册的每个名字都在表上，表上每个名字都还在源码里。
     expect(names.slice().sort()).toEqual(listed.slice().sort());
-    expect(names.length).toBe(34);
+    expect(names.length).toBe(35);
     expect(unknownTieredTools(names)).toEqual([]);
   });
 
@@ -62,7 +62,7 @@ describe("tier table coverage", () => {
       "bcdp_wait",
     ]);
     expect(TIER_MEMBERS.power).toEqual([
-      "bcdp_cdp", "bcdp_http", "bcdp_upload", "bcdp_download", "bcdp_dialog",
+      "bcdp_cdp", "bcdp_http", "bcdp_upload", "bcdp_download", "bcdp_dialog", "bcdp_diagnostics",
     ]);
     expect(TIER_MEMBERS.session).toEqual([
       "bcdp_captcha", "bcdp_auth_flush", "bcdp_login_import",

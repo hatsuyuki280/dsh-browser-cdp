@@ -1,6 +1,6 @@
 {
   "name": "dsh-browser-cdp",
-  "version": "1.7.6",
+  "version": "1.7.7-dshfix.1",
   "description": "dsh-browser-cdp: DSH browser plugin — attach to a running Chrome/Edge over CDP (no bundled browser needed); structured browser-automation tools (30+ bcdp_*) that drive the vendored ego runtime through ctx.subprocess, plus a realtime watch panel (live SSE screencast + direct mouse interaction + download capture + human-verification notice). Web shell: floating watch panel without dsh-better-sidebar, sidebar tab with it. Headless/TUI hosts: tools-only. [DSH 0.1.7-rc.1 ~ 0.2.1-rc.1 line (exact rc enumeration): declarative settings via Config .volatile() fields; for DSH 0.1.2-rc.1 ~ 0.1.5-rc.3 use the 0.17.x line]",
   "type": "module",
   "main": "./lib/index.js",

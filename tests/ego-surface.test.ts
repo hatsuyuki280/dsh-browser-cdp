@@ -60,11 +60,11 @@ describe("schema budget (the ≤+15% gate from the plan)", () => {
   const schemaChars = (t: any) =>
     String(t?.description ?? "").length + JSON.stringify(t?.parameters ?? {}).length;
 
-  it("all 34 tools registered together stay under the +15% schema ceiling", () => {
+  it("all 35 tools registered together stay under the +15% schema ceiling", () => {
     const { handles } = mountCapturing({ layaKey: "k" });
     const sizes = [...handles.values()].map(schemaChars);
     const total = sizes.reduce((a, b) => a + b, 0);
-    expect(sizes.length).toBe(34);
+    expect(sizes.length).toBe(35);
     expect(total, `schema total ${total} > ceiling ${CEILING}`).toBeLessThanOrEqual(CEILING);
   });
 });

@@ -4136,16 +4136,10 @@ clearTimeout((panel as any)._dshHideT)
 			// SESSION: each conversation gets its own one-shot, and the open is scoped to
 			// the CALLING session, so a background conversation's tool call opens the Tab
 			// in ITS OWN sidebar instead of the one the user is looking at.
-			var autoOpened: Record<string, boolean> = {}
-			var openWatchTab = function (sessionId: any) {
-				var key = sessionId || ''
-				if (autoOpened[key] === true) return
-				autoOpened[key] = true
-				try {
-					// The second argument is the session scope; without it the open lands
-					// in whatever sidebar is currently on screen.
-					betterSidebar.openTab({ type: 'dsh-browser-cdp:watch' }, sessionId ? { sessionId: sessionId } : undefined)
-				} catch (e) {}
+			// The tab stays registered in the sidebar "+" menu, but never steals
+			// sidebar space on a tool call. The user opens it explicitly.
+			var openWatchTab = function (_sessionId: any) {
+				return
 			}
 			// One-shot baseline fetch (NOT a polling loop). After this, the
 			// SSE `tool-call` event is the sole signal.
