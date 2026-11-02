@@ -4131,32 +4131,14 @@ clearTimeout((panel as any)._dshHideT)
 			// session, and the probe stream stays open (a later session must
 			// still be able to auto-open).
 			var probeDisposed = false
-			var baseline: any = null // null = not yet observed; set on first fetch
-			// Sessions whose sidebar already auto-opened this page load. Keyed PER
-			// SESSION: each conversation gets its own one-shot, and the open is scoped to
-			// the CALLING session, so a background conversation's tool call opens the Tab
-			// in ITS OWN sidebar instead of the one the user is looking at.
-			// The tab stays registered in the sidebar "+" menu, but never steals
-			// sidebar space on a tool call. The user opens it explicitly.
-			var openWatchTab = function (_sessionId: any) {
-				return
-			}
-			// One-shot baseline fetch (NOT a polling loop). After this, the
-			// SSE `tool-call` event is the sole signal.
-			void (async function () {
-				if (probeDisposed) return
+			// Ordinary bcdp_* calls keep the tab collapsed. The agent explicitly
+			// asks for it with bcdp_watch; only that SSE event (open:true) opens
+			// the tab, scoped to the calling session.
+			var openWatchTab = function (sessionId: any) {
 				try {
-					var res = await fetch(SPACES_ROUTE, { cache: 'no-store' })
-					if (!res.ok) return
-					var data = await res.json()
-					if (data && typeof data.toolCallCount === 'number') {
-						baseline = data.toolCallCount
-					}
+					betterSidebar.openTab({ type: 'dsh-browser-cdp:watch' }, sessionId ? { sessionId: sessionId } : undefined)
 				} catch (e) {}
-			})()
-			// Listen for tool-call events on the shared SSE stream. The probe
-			// opens its OWN EventSource so it works even before the Tab is
-			// mounted (the Tab's controller only connects after the Tab opens).
+			}
 			var probeSse: any = null
 			try { probeSse = new EventSource('/api/bcdp/stream') } catch (e) {}
 			if (probeSse) {
@@ -4164,19 +4146,9 @@ clearTimeout((panel as any)._dshHideT)
 					if (probeDisposed) return
 					try {
 						var m = JSON.parse(ev.data)
-						if (!m || typeof m.count !== 'number') return
+						if (!m || m.open !== true) return
 						var sid = typeof m.sessionId === 'string' && m.sessionId !== '' ? m.sessionId : undefined
-						if (baseline === null) {
-							// Event arrived before the baseline fetch resolved —
-							// treat this count as the baseline (it's the first
-							// we've seen) and open on the NEXT one. But if count
-							// is already >0, the agent has called a tool this
-							// session, so open now.
-							baseline = m.count
-							if (m.count > 0) openWatchTab(sid)
-							return
-						}
-						if (m.count > baseline) openWatchTab(sid)
+						openWatchTab(sid)
 					} catch (e) {}
 				})
 			}

@@ -140,6 +140,28 @@ describe("runWithStaleSpaceRetry", () => {
     expect(subprocess.calls).toBe(2);
   });
 
+  it("re-probes and retries when the runtime says CDP channel is not open", async () => {
+    const tracker = createActiveSpaceTracker("dsh-agent");
+    const subprocess = fakeSubprocess([
+      // "CDP channel is not open" is also a cold-start signature, so the normal
+      // warmup gets three attempts before the stale-attach re-probe is needed.
+      { exitCode: 1, stderr: "Error: CDP channel is not open" },
+      { exitCode: 1, stderr: "Error: CDP channel is not open" },
+      { exitCode: 1, stderr: "Error: CDP channel is not open" },
+      { exitCode: 0, stdout: "@@DSH_RESULT@@{\"ok\":true}" },
+    ]);
+    let probes = 0;
+    const result = await runWithStaleSpaceRetry(
+      fakeCtx(subprocess),
+      fakeCfg(tracker, { refreshAttach: async () => { probes++; return true; } }),
+      fakeExec,
+      () => "script",
+    );
+    expect(probes).toBe(1);
+    expect(result.ok).toBe(true);
+    expect(subprocess.calls).toBe(4);
+  });
+
   it("does not retry a connect failure when the re-probe found no new endpoint", async () => {
     const tracker = createActiveSpaceTracker("dsh-agent");
     const subprocess = fakeSubprocess([

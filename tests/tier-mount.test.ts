@@ -143,8 +143,8 @@ describe("tool tier injection at mount", () => {
     expect(atFullBrowse).toBeGreaterThan(afterOne);
     // 全量档（always + 配了评审 Key）：README 的 35 件数字以此为准。
     const full = mount({ toolInjection: "always", layaKey: "k" });
-    expect(full.live.length).toBe(35);
-    console.log(`FACE full=${faceChars(full.live, full.handles)} tools=35`);
+    expect(full.live.length).toBe(36);
+    console.log(`FACE full=${faceChars(full.live, full.handles)} tools=36`);
     // 分批 schema（README 表格数据）：同一个序列化口径。
     const perTool = new Map<string, number>(
       full.live.map((n) => [n, JSON.stringify({ name: n, description: full.handles.get(n).description, parameters: full.handles.get(n).parameters }).length]),
@@ -164,9 +164,9 @@ describe("tool tier injection at mount", () => {
     expect(live).not.toContain("bcdp_jev_run");
   });
 
-  it("always + a configured judge key = all 35 on the surface", () => {
+  it("always + a configured judge key = all 36 on the surface", () => {
     const { live } = mount({ toolInjection: "always", layaKey: "k" });
-    expect(live.length).toBe(35);
+    expect(live.length).toBe(36);
     expect(sorted(live)).toEqual(sorted(Object.values(TIER_MEMBERS).flat()));
   });
 
@@ -213,7 +213,7 @@ describe("tool tier injection at mount", () => {
     // 开关状态必须在 doctor 里可见，否则用户不知道自己被封印了什么。
     expect(String(report.report)).toMatch(/tool injection: mode=lazy browse=open extended=open escape=open judge=open/);
     // doctor 自己也算一次活动，所以此刻 depth=2：live = core+act+observe+power+session+escape = 29，封 wait+judge = 6。
-    expect(String(report.report)).toMatch(/live 29 \/ sealed 6/);
+    expect(String(report.report)).toMatch(/live 30 \/ sealed 6/);
     config.toolExtended = false;
     m.emitVolatileUpdate();
     // power/session 被收，act / observe 批与 escape 仍在。
@@ -235,7 +235,7 @@ describe("tool tier injection at mount", () => {
     expect(m.live).toContain("bcdp_click");
     expect(m.live).toContain("bcdp_cdp");
     // 35 − escape 1 − judge 5（always 下仍无 Key，评审级照旧封印）。
-    expect(m.live.length).toBe(35 - 1 - 5);
+    expect(m.live.length).toBe(36 - 1 - 5);
   });
 
   it("judge tools appear the moment a key is configured (volatile reapply, no remount)", () => {

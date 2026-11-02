@@ -3887,12 +3887,14 @@ var DiagnosticsStore = class {
 var TargetSessions = class {
 	cdp;
 	sessions;
+	pending;
 	diagnostics;
 	detachDestroyed;
 	destroyedHandlers;
 	constructor(cdp) {
 		this.cdp = cdp;
 		this.sessions = /* @__PURE__ */ new Map();
+		this.pending = /* @__PURE__ */ new Map();
 		this.diagnostics = new DiagnosticsStore(cdp);
 		this.detachDestroyed = cdp.on("Target.targetDestroyed", (params) => {
 			const { targetId } = params;
@@ -3905,6 +3907,17 @@ var TargetSessions = class {
 	}
 	async ensure(targetId) {
 		if (this.sessions.has(targetId)) return this.sessions.get(targetId);
+		const existing = this.pending.get(targetId);
+		if (existing) return existing;
+		const task = this.#attach(targetId);
+		this.pending.set(targetId, task);
+		try {
+			return await task;
+		} finally {
+			this.pending.delete(targetId);
+		}
+	}
+	async #attach(targetId) {
 		const result = await this.cdp.call("Target.attachToTarget", {
 			targetId,
 			flatten: true
@@ -6829,13 +6842,29 @@ async function listTargets() {
 	return ((await active.cdp.call("Target.getTargets")).targetInfos || []).filter((target) => target.type === "page");
 }
 async function activeTargetId() {
-	if (!active?.port) return currentStatus.targetId || null;
-	try {
+	if (!active) return currentStatus.targetId || null;
+	if (active.port) try {
 		const response = await fetch(`http://127.0.0.1:${active.port}/json/list`, { signal: AbortSignal.timeout(1500) });
-		return (response.ok ? await response.json() : []).find((entry) => entry.type === "page")?.id || currentStatus.targetId || null;
+		const fromHttp = (response.ok ? await response.json() : []).find((entry) => entry.type === "page")?.id;
+		if (fromHttp) return fromHttp;
+	} catch {}
+	try {
+		const targets = await listTargets();
+		return (targets.find((target) => target.url && !target.url.startsWith("about:")) ?? targets[0])?.targetId || currentStatus.targetId || null;
 	} catch {
 		return currentStatus.targetId || null;
 	}
+}
+/** Attach the live page targets so diagnostics work even without a watch tab. */
+async function primeDiagnostics() {
+	if (!active) return;
+	try {
+		await active.cdp.call("Target.setDiscoverTargets", { discover: true });
+	} catch {}
+	try {
+		const targets = await listTargets();
+		await Promise.allSettled(targets.slice(0, 20).map((target) => active.sessions.ensure(target.targetId)));
+	} catch {}
 }
 async function snapshotSpaces() {
 	const targets = await listTargets();
@@ -6892,6 +6921,12 @@ async function connectLoop() {
 				sessions
 			};
 			publishStatus({ browserConnected: true });
+			await primeDiagnostics();
+			cdp.on("Target.targetCreated", (params) => {
+				const info = params.targetInfo;
+				if (!active || info?.type !== "page" || !info.targetId) return;
+				active.sessions.ensure(info.targetId).catch(() => {});
+			});
 			await manager.browserConnected();
 			await new Promise((resolve) => {
 				ws.addEventListener("close", () => resolve(), { once: true });

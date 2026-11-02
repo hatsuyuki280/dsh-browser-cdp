@@ -36,6 +36,8 @@ let attachWsUrl: string | null = null
 let attachEngine: 'chrome' | 'lightpanda' | 'unknown' | null = null
 /** Logger captured in initCastServer so module-level helpers can report. */
 let castLogger: { info?: (message: string) => void; warn?: (message: string) => void } | undefined
+/** Late-bound worker starter so diagnostics/PDF work before any watch tab. */
+let ensureWorkerRef: (() => Promise<number | null>) | undefined
 
 /**
  * Publish the currently resolved endpoint for the worker. Called by the host
@@ -168,6 +170,24 @@ export function markEgoToolCall(sessionId?: string): void {
   }
 }
 
+/**
+ * Explicit "show the live view" signal. Ordinary bcdp_* calls never open the
+ * sidebar tab; the agent asks for it only when the user needs to watch.
+ */
+export function requestWatchOpen(sessionId?: string): void {
+  const payload = sessionId === undefined || sessionId === ''
+    ? { count: toolCallCount, open: true }
+    : { count: toolCallCount, sessionId, open: true }
+  const frame = `event: tool-call\ndata: ${JSON.stringify(payload)}\n\n`
+  for (const res of sseClients) {
+    try {
+      res.write(frame)
+    } catch {
+      sseClients.delete(res)
+    }
+  }
+}
+
 function castStatePath(): string {
   // Mirror the ego-lite runtime state dir across platforms so we find the
   // worker's state file wherever it ran: Windows uses
@@ -180,12 +200,14 @@ function castStatePath(): string {
   const e = process.env
   const isWin = process.platform === 'win32'
   const home = e.HOME || e.USERPROFILE || (isWin ? e.LOCALAPPDATA || '' : '/root')
-  const stateHome = e.EGO_LINUX_STATE_DIR || (isWin
+  // Explicit EGO_LINUX_STATE_DIR is the worker's STATE_DIR verbatim — the
+  // worker writes `<dir>/dsh-browser-cdp.cast.json`, not a nested
+  // `<dir>/ego-lite-linux/...` file.
+  if (e.EGO_LINUX_STATE_DIR) return `${e.EGO_LINUX_STATE_DIR}/dsh-browser-cdp.cast.json`
+  const stateHome = isWin
     ? (e.LOCALAPPDATA || `${home}\\AppData\\Local`)
-    : (e.XDG_STATE_HOME || `${home}/.local/state`))
-  return stateHome.endsWith('ego-lite-linux')
-    ? `${stateHome}/dsh-browser-cdp.cast.json`
-    : `${stateHome}/ego-lite-linux/dsh-browser-cdp.cast.json`
+    : (e.XDG_STATE_HOME || `${home}/.local/state`)
+  return `${stateHome}/ego-lite-linux/dsh-browser-cdp.cast.json`
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -235,11 +257,11 @@ export async function readWorkerDiagnostics(
   limit = 50,
   targetId?: string,
 ): Promise<Record<string, unknown> | null> {
-  const state = await knownWorkerState()
-  if (state.port === null) return null
+  const port = ensureWorkerRef ? await ensureWorkerRef() : (await knownWorkerState()).port
+  if (port === null) return null
   const query = new URLSearchParams({ kind, limit: String(limit) })
   if (targetId) query.set('targetId', targetId)
-  const result = await proxyFrom(state.port, `/api/diagnostics?${query.toString()}`)
+  const result = await proxyFrom(port, `/api/diagnostics?${query.toString()}`)
   return result !== null && typeof result === 'object' ? result as Record<string, unknown> : null
 }
 
@@ -252,9 +274,9 @@ export async function printWorkerPdf(options: {
   paperWidth?: number
   paperHeight?: number
 }): Promise<ProxyPostResult | null> {
-  const state = await knownWorkerState()
-  if (state.port === null) return null
-  return proxyPost(state.port, '/api/pdf', options, 30_000)
+  const port = ensureWorkerRef ? await ensureWorkerRef() : (await knownWorkerState()).port
+  if (port === null) return null
+  return proxyPost(port, '/api/pdf', options, 30_000)
 }
 
 /**
@@ -536,6 +558,20 @@ function workerEnv(): NodeJS.ProcessEnv {
   return base
 }
 
+/**
+ * Initialize the worker starter independently of the HTTP watch routes.
+ * Headless profiles have no `webServer`, but bcdp_diagnostics/PDF still need
+ * the worker; web profiles reuse this same starter from initCastServer.
+ */
+export function initCastWorker(ctx: EgoContext, cfg: ResolvedConfig, ffmpegManager: FfmpegInstallationManager | null): void {
+  ensureWorkerRef ??= makeEnsureWorker(ctx, cfg, ffmpegManager)
+}
+
+/** Start the worker now (e.g. before a navigate) so diagnostics has history. */
+export async function ensureCastWorker(): Promise<number | null> {
+  return ensureWorkerRef ? ensureWorkerRef() : null
+}
+
 /** Ensure a single ego-cast worker is running (idempotent). Launches it via
  * ctx.subprocess. Re-spawns whenever the previous worker is found dead (its
  * pid no longer alive or its /api/health does not answer), so a crashed
@@ -634,7 +670,8 @@ export function initCastServer(
   openAgentWindow: () => Promise<{ ok: boolean; error?: string }> = async () => ({ ok: false, error: 'raise not supported by this host build' }),
   loginImport: (opts: LoginImportOptions) => Promise<LoginImportReport> = async () => ({ ok: false, error: 'login import not supported by this host build' }),
 ): void {
-  const ensureWorker = makeEnsureWorker(ctx, cfg, ffmpegManager)
+  initCastWorker(ctx, cfg, ffmpegManager)
+  const ensureWorker = ensureWorkerRef!
   const pushConfig = makePushConfig(ensureWorker, ffmpegManager)
   // The web shell exposes `webServer` — the only HTTP host surface the plugin
   // uses. It is NOT a required inject (TUI / headless hosts have none), so we

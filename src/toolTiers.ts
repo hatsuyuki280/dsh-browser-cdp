@@ -45,6 +45,7 @@ const CORE = [
 ] as const
 const ACT = [
   'bcdp_space',
+  'bcdp_watch',
   'bcdp_navigate',
   'bcdp_click',
   'bcdp_fill',

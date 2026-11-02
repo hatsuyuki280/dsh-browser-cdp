@@ -303,12 +303,35 @@ async function listTargets(): Promise<Array<{ targetId: string; url: string; tit
 }
 
 async function activeTargetId(): Promise<string | null> {
-  if (!active?.port) return (currentStatus.targetId as string | null) || null
+  if (!active) return (currentStatus.targetId as string | null) || null
+  if (active.port) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${active.port}/json/list`, { signal: AbortSignal.timeout(1500) })
+      const list = response.ok ? await response.json() as Array<{ id?: string; type?: string }> : []
+      const fromHttp = list.find((entry) => entry.type === 'page')?.id
+      if (fromHttp) return fromHttp
+    } catch { /* fall through to the CDP target list */ }
+  }
   try {
-    const response = await fetch(`http://127.0.0.1:${active.port}/json/list`, { signal: AbortSignal.timeout(1500) })
-    const list = response.ok ? await response.json() as Array<{ id?: string; type?: string }> : []
-    return list.find((entry) => entry.type === 'page')?.id || (currentStatus.targetId as string | null) || null
-  } catch { return (currentStatus.targetId as string | null) || null }
+    const targets = await listTargets()
+    // Prefer a real page over a leftover about:blank tab; CDP target order is
+    // not an activity order, so taking [0] blindly points diagnostics at the
+    // wrong tab after a navigate.
+    const real = targets.find((target) => target.url && !target.url.startsWith('about:')) ?? targets[0]
+    return real?.targetId || (currentStatus.targetId as string | null) || null
+  } catch {
+    return (currentStatus.targetId as string | null) || null
+  }
+}
+
+/** Attach the live page targets so diagnostics work even without a watch tab. */
+async function primeDiagnostics(): Promise<void> {
+  if (!active) return
+  try { await active.cdp.call('Target.setDiscoverTargets', { discover: true }) } catch { /* optional */ }
+  try {
+    const targets = await listTargets()
+    await Promise.allSettled(targets.slice(0, 20).map((target) => active!.sessions.ensure(target.targetId)))
+  } catch { /* best-effort: page tools still work if a target is not attachable */ }
 }
 
 async function snapshotSpaces(): Promise<Array<Record<string, unknown>>> {
@@ -340,6 +363,12 @@ async function connectLoop(): Promise<void> {
       const sessions = new TargetSessions(cdp)
       active = { ...browser, ws, cdp, sessions }
       publishStatus({ browserConnected: true })
+      await primeDiagnostics()
+      cdp.on('Target.targetCreated', (params: unknown) => {
+        const info = (params as { targetInfo?: { targetId?: string; type?: string } }).targetInfo
+        if (!active || info?.type !== 'page' || !info.targetId) return
+        void active.sessions.ensure(info.targetId).catch(() => { /* best-effort */ })
+      })
       await manager.browserConnected()
       await new Promise<void>((resolve) => { ws.addEventListener('close', () => resolve(), { once: true } as AddEventListenerOptions); ws.addEventListener('error', () => resolve(), { once: true } as AddEventListenerOptions) })
       await manager.browserDisconnected()

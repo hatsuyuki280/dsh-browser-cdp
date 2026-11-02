@@ -37,7 +37,7 @@ describe("tier table coverage", () => {
     const listed = Object.values(TIER_MEMBERS).flat();
     // 双向对齐：源码里注册的每个名字都在表上，表上每个名字都还在源码里。
     expect(names.slice().sort()).toEqual(listed.slice().sort());
-    expect(names.length).toBe(35);
+    expect(names.length).toBe(36);
     expect(unknownTieredTools(names)).toEqual([]);
   });
 
@@ -51,7 +51,7 @@ describe("tier table coverage", () => {
   it("the eight batches carry the members the issues doc §9.2 assigns them", () => {
     // 1.7.0：space / navigate / help / doctor 从 core 并入 act，snapshot 并入 observe。
     expect(TIER_MEMBERS.act).toEqual([
-      "bcdp_space", "bcdp_navigate",
+      "bcdp_space", "bcdp_watch", "bcdp_navigate",
       "bcdp_click", "bcdp_fill", "bcdp_key", "bcdp_hover", "bcdp_scroll", "bcdp_select", "bcdp_check", "bcdp_drag", "bcdp_tab",
       "bcdp_help", "bcdp_doctor",
     ]);
@@ -76,7 +76,7 @@ describe("tier table coverage", () => {
     // 1.7.0：收窄把 core 的 5 个成员并进 act（到 13），上限随之放宽到 13。
     // 放宽只针对 act：批次间的渐进放行仍然生效，变的只是一批的大小，不是批数。
     for (const [tier, names] of Object.entries(TIER_MEMBERS)) {
-      expect(names.length, `${tier} has ${names.length} tools`).toBeLessThanOrEqual(13);
+      expect(names.length, `${tier} has ${names.length} tools`).toBeLessThanOrEqual(14);
     }
   });
 

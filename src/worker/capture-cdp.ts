@@ -20,6 +20,7 @@ interface JpegFrame {
 export class TargetSessions {
   cdp: CdpClient
   sessions: Map<string, Session>
+  pending: Map<string, Promise<Session>>
   diagnostics: DiagnosticsStore
   detachDestroyed: () => void
   destroyedHandlers: Set<(targetId: string) => void>
@@ -27,6 +28,7 @@ export class TargetSessions {
   constructor(cdp: CdpClient) {
     this.cdp = cdp
     this.sessions = new Map()
+    this.pending = new Map()
     this.diagnostics = new DiagnosticsStore(cdp)
     this.detachDestroyed = cdp.on('Target.targetDestroyed', (params: unknown) => {
       const { targetId } = params as { targetId?: string }
@@ -40,6 +42,18 @@ export class TargetSessions {
 
   async ensure(targetId: string): Promise<Session> {
     if (this.sessions.has(targetId)) return this.sessions.get(targetId)!
+    const existing = this.pending.get(targetId)
+    if (existing) return existing
+    const task = this.#attach(targetId)
+    this.pending.set(targetId, task)
+    try {
+      return await task
+    } finally {
+      this.pending.delete(targetId)
+    }
+  }
+
+  async #attach(targetId: string): Promise<Session> {
     const result = await this.cdp.call('Target.attachToTarget', { targetId, flatten: true }) as { sessionId?: string }
     if (!result.sessionId) throw new Error(`CDP did not return a session for ${targetId}`)
     const session: Session = { targetId, sessionId: result.sessionId, viewportW: null, viewportH: null }

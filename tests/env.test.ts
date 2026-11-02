@@ -9,6 +9,7 @@ import { describe, it, beforeEach, afterEach, expect } from "vitest";
 import { existsSync } from "node:fs";
 
 import { resolveEgoEnv, findChromeBinary } from "../src/index.ts";
+import { defaultAttachCache, emptyAttachState } from "../src/cdp-targets.ts";
 
 // ─── resolveEgoEnv: Windows ────────────────────────────────────────────────
 
@@ -158,6 +159,28 @@ describe("resolveEgoEnv (chromePath config)", () => {
       },
     );
     expect(env.EGO_LINUX_CHROME).toBe(userSet);
+  });
+});
+
+// ─── resolveEgoEnv: local managed launcher attach ──────────────────────────
+
+describe("resolveEgoEnv (local managed launcher)", () => {
+  afterEach(() => defaultAttachCache.reset());
+
+  it("injects the ready local launcher ws URL in cdpMode=local", () => {
+    defaultAttachCache.patch({
+      ...emptyAttachState(),
+      mode: "local",
+      status: "ready",
+      endpoint: "http://127.0.0.1:38677",
+      wsUrl: "ws://127.0.0.1:38677/devtools/browser/test",
+      endpointSource: "local",
+    } as never);
+    const env = resolveEgoEnv(
+      { cdpMode: "local" },
+      { platform: "linux", baseEnv: { HOME: "/root" } },
+    );
+    expect(env.EGO_LINUX_CDP_URL).toBe("ws://127.0.0.1:38677/devtools/browser/test");
   });
 });
 

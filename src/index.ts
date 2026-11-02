@@ -36,7 +36,7 @@ import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { importLoginCookies } from './login-import.ts'
-import { initCastServer, markEgoToolCall, getLastEgoActivity, onEgoActivity, setAttachEndpoint, recycleWorker, readWorkerDiagnostics, printWorkerPdf } from './cast-server.ts'
+import { initCastServer, initCastWorker, ensureCastWorker, markEgoToolCall, getLastEgoActivity, onEgoActivity, setAttachEndpoint, recycleWorker, readWorkerDiagnostics, printWorkerPdf, requestWatchOpen } from './cast-server.ts'
 import { registerEgoBrowserGateway } from './gateway.ts'
 import { EGO_HELP_INDEX } from './help.ts'
 import { HUMAN_CHECK_PROBE } from './captcha.ts'
@@ -521,7 +521,18 @@ export function resolveEgoEnv(cfg: Partial<ResolvedConfig>, { platform = process
   // change �?see the `triggerCdpRefresh` wiring in apply(). The cache, not
   // this function, owns the probe; this function only applies the decision.
   const decision = decideCdpAttach(cfg)
-  if (decision.kind === 'inject') env[EGO_LINUX_CDP_URL] = decision.wsUrl
+  if (decision.kind === 'inject') {
+    env[EGO_LINUX_CDP_URL] = decision.wsUrl
+  } else if (decision.kind === 'local' && cfg.cdpMode === 'local' && env[EGO_LINUX_CDP_URL] === undefined) {
+    // Local mode's managed launcher has a live ws URL in the attach cache.
+    // The vendored ego runtime reads EGO_LINUX_CDP_URL; without this bridge
+    // local mode starts a browser for the panel but page tools still read a
+    // stale browser.json (the exact "CDP channel is not open" failure).
+    const local = defaultAttachCache.get()
+    if (local.status === 'ready' && local.endpointSource === 'local' && local.wsUrl !== '') {
+      env[EGO_LINUX_CDP_URL] = local.wsUrl
+    }
+  }
   // ── R4: cursor HUD material (drawn into screenshots by the runtime) ─────
   if (env.EGO_LINUX_CURSOR === undefined && cfg?.cursorHud !== undefined) {
     env.EGO_LINUX_CURSOR = cfg.cursorHud ? '1' : '0'
@@ -757,7 +768,7 @@ export const TAB_STUCK_RE = /no active tab|navigation (?:timed out|timeout)|page
  * deliberately NOT folded into `TAB_STUCK_RE`: the fix is a re-probe of the link,
  * not a tab swap, so the two recoveries must stay distinguishable.
  */
-export const CDP_CONNECT_FAIL_RE = /failed to connect to CDP endpoint/i
+export const CDP_CONNECT_FAIL_RE = /failed to connect to CDP endpoint|CDP channel is not open/i
 
 /** True when a failed run looks like a wedged/absent tab rather than a cold start. */
 export function isTabStuckFailure(result: WarmupResult): boolean {
@@ -1746,6 +1757,9 @@ bridge.onChange(() => tiers.reapply())
   ctx.effect?.(() => () => {
     defaultAttachCache.reset()
   })
+  // The diagnostics/PDF worker is independent of the optional HTTP watch host;
+  // initialize it unconditionally so headless profiles can start it on demand.
+  initCastWorker(ctx, resolveConfig(bridge.source() as RawConfig), ffmpegManager)
   // Realtime watch-panel host routes (/api/bcdp/*). Guarded: only meaningful
   // when the host exposes an HTTP server (web surface); headless safe-no-op.
   // The host service is `webServer` on the web shell (current runner). We only
@@ -2249,6 +2263,26 @@ function registerDiagnosticsTool(ctx: EgoContext, cfg: EgoRuntimeConfig, reg: (t
 
 /** The structured action tools that drive `ego-browser nodejs`. */
 function registerActionTools(ctx: EgoContext, cfg: EgoRuntimeConfig, reg: (tool: ToolHandle) => void): void {
+  reg(
+    defineTool({
+      name: 'bcdp_watch',
+      description:
+        'Open the live CDP watch tab in the sidebar on demand. Ordinary bcdp_* calls keep it collapsed; use this when the user should watch the page in real time.',
+      parameters: {},
+      output: { schema: commonOutputSchema, render: renderText },
+      timeoutMs: 15_000,
+      execute: async (_args: Record<string, unknown>, exec: ToolExec) => {
+        const sessionId = callingSessionId(exec)
+        markEgoToolCall(sessionId)
+        requestWatchOpen(sessionId)
+        // Start the worker before the navigation, so network/console history
+        // is captured for the page the user is about to watch.
+        await ensureCastWorker()
+        return { ok: true, opened: true }
+      },
+      presentCall: () => ({ card: 'generic', title: 'bcdp_watch', kind: 'other', rawInput: null }),
+    } as unknown as DefineToolOpts),
+  )
   registerDiagnosticsTool(ctx, cfg, reg)
   const t = (opts: EgoToolOptions): ToolHandle => defineEgoTool(ctx, cfg, {
     ...opts,
